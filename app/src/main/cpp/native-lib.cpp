@@ -49,11 +49,7 @@ inline void Unhook(PTR_T ptr) {
 }
 
 void* MethodFinder(void* libHandle, const char* symbolName) {
-    void* ptr = dlsym(libHandle, symbolName);
-    char ptrStr[64];
-    snprintf(ptrStr, sizeof(ptrStr), "%p", ptr);
-    Logger::LogDebug("pointer to '" + std::string(symbolName) + "': " + std::string(ptrStr));
-    return ptr;
+    return dlsym(libHandle, symbolName);
 }
 
 void GetElfScanner() {
@@ -189,7 +185,6 @@ bool Init(JNIEnv* env) {
         }
         Logger::LogDebug("Found assemblyClass!");
         Utils::PTR GetTypesAddr = Class(assemblyClass).GetMethod("GetTypes", 1).GetAddress();
-        Utils::DumpInstructions(GetTypesAddr, 200);
         if (GetTypesAddr == 0) {
             Logger::LogError("Unable to find GetTypes address!");
             return false;
@@ -210,20 +205,20 @@ bool Init(JNIEnv* env) {
         }
         Logger::LogDebug("Found orig_Image$$GetTypes!");
     }
-//    Logger::LogDebug("Finding il2cpp_domain_get_assemblies...");
-//    auto adr = (Utils::PTR)MethodFinder(IL2CPP_API_il2cpp_domain_get_assemblies);
-//    if (adr == 0) {
-//        Logger::LogError("Unable to find domain_get_assemblies!");
-//        return false;
-//    }
-//    Logger::LogDebug("domain_get_assemblies address: " + std::to_string(adr));
-//    //Utils::DumpInstructions(adr, 200);
-//    il2cppMethods.Assembly$$GetAllAssemblies = (std::vector<Il2CppAssembly *> *(*)())adr;
-//    if (!il2cppMethods.Assembly$$GetAllAssemblies) {
-//        Logger::LogError("Unable to find Assembly$$GetAllAssemblies!");
-//        return false;
-//    }
-//    Logger::LogDebug("Found Assembly$$GetAllAssemblies!");
+    Logger::LogDebug("Finding il2cpp_domain_get_assemblies...");
+    auto adr = (Utils::PTR)MethodFinder(handle, IL2CPP_API_il2cpp_domain_get_assemblies);
+    if (adr == 0) {
+        Logger::LogError("Unable to find domain_get_assemblies!");
+        return false;
+    }
+    Logger::LogDebug("domain_get_assemblies address: " + std::to_string(adr));
+    //Utils::DumpInstructions(adr, 200);
+    il2cppMethods.Assembly$$GetAllAssemblies = (std::vector<Il2CppAssembly *> *(*)())adr;
+    if (!il2cppMethods.Assembly$$GetAllAssemblies) {
+        Logger::LogError("Unable to find Assembly$$GetAllAssemblies!");
+        return false;
+    }
+    Logger::LogDebug("Found Assembly$$GetAllAssemblies!");
     return result;
 }
 

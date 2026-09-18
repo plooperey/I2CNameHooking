@@ -2,6 +2,7 @@
 
 #include <string>
 #include <android/log.h>
+#include <dlfcn.h>
 
 struct Utils {
 #ifdef __LP64__
@@ -19,14 +20,14 @@ struct Utils {
 #elif defined(__aarch64__)
     static bool IsBranchHex(const std::string&);
 #elif defined(__i386__) || defined(__x86_64__)
-    static bool IsCall(const std::string&);
+    static bool IsCallHex(const std::string&);
 #endif
 
     template<size_t len>
     static std::string ReadMemory(PTR memAddr);
     static bool DecodeBranchOrCall(const std::string &hex, PTR offset, PTR &outOffset);
     static PTR FindNextJump(PTR start, uint8_t index);
-    static void DumpInstructions(Utils::PTR start, int numInstructions);
+    static void* OffsetInLib(void*);
 
     template <typename T>
     static T ReturnEmpty(T ty);

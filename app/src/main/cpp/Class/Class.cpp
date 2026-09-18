@@ -18,14 +18,20 @@ Class::Class(const Il2CppClass* clazz) {
 }
 
 Class::Class(const char* classNamespace, const char* className) {
-    Logger::LogDebug("Creating class with namespace '" + std::string(classNamespace) + "' and name '" + std::string(className) + '\'');
-    auto domain = il2cppMethods.il2cpp_domain_get();
-    Logger::LogDebug("Got domain.");
-    size_t assembliesCount;
-    auto assemblies = il2cppMethods.il2cpp_domain_get_assemblies(domain, &assembliesCount);
-    Logger::LogDebug("Assemblies count: " + std::to_string(assembliesCount));
-    for (size_t as = 0; as < assembliesCount; as++) {
-        Il2CppImage* image = assemblies[as]->image;
+    Logger::LogDebug("Find class with namespace '" + std::string(classNamespace) + "' and class name '" + std::string(className) + "'");
+    std::vector<Il2CppAssembly*>* assemblies{};
+    if (il2cppMethods.Assembly$$GetAllAssemblies) assemblies = il2cppMethods.Assembly$$GetAllAssemblies();
+    else {
+        Logger::LogError("GetAllAssemblies is null!");
+        return;
+    }
+    if (assemblies->empty()) {
+        Logger::LogError("Assemblies is null!");
+        return;
+    }
+    for (auto assembly : *assemblies) {
+        Il2CppImage* image = assembly->image;
+        Logger::LogDebug(assembly->aname.name);
         Logger::LogDebug(image->name);
         size_t count = image->typeCount;
         for (size_t i = 0; i < count; ++i) {
@@ -56,4 +62,9 @@ InnerMethod Class::GetMethod(const std::string& methodName, int paramsCount) con
         if (method->name == methodName && method->parameters_count == paramsCount) return method;
     }
     return {};
+}
+
+bool Class::IsValid() const {
+    Class::TryInit();
+    return classData;
 }

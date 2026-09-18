@@ -12,6 +12,7 @@ struct Class {
     Class() = default;
 
     void TryInit() const;
+    [[nodiscard]] bool IsValid() const;
     [[nodiscard]] InnerMethod GetMethod(const std::string&) const;
     [[nodiscard]] InnerMethod GetMethod(const std::string&, int) const;
 
