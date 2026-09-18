@@ -1,0 +1,33 @@
+#pragma once
+
+
+#define IL2CPP_API_il2cpp_init "il2cpp_init"
+#define IL2CPP_API_il2cpp_class_from_il2cpp_type "il2cpp_class_from_il2cpp_type"
+
+#define IL2CPP_API_il2cpp_array_new_specific "il2cpp_array_new_specific"
+#define IL2CPP_API_il2cpp_class_from_type "il2cpp_class_from_type"
+#define IL2CPP_API_il2cpp_type_get_class_or_element_class "il2cpp_type_get_class_or_element_class"
+#define IL2CPP_API_il2cpp_domain_get_assemblies "il2cpp_domain_get_assemblies"
+#define IL2CPP_API_il2cpp_domain_assembly_open "il2cpp_domain_assembly_open"
+
+#define IL2CPP_API_il2cpp_image_get_class "il2cpp_image_get_class"
+#define IL2CPP_API_il2cpp_get_corlib "il2cpp_get_corlib"
+#define IL2CPP_API_il2cpp_class_from_name "il2cpp_class_from_name"
+#define IL2CPP_API_il2cpp_assembly_get_image "il2cpp_assembly_get_image"
+#define IL2CPP_API_il2cpp_method_get_param_name "il2cpp_method_get_param_name"
+#define IL2CPP_API_il2cpp_array_class_get "il2cpp_array_class_get"
+#define IL2CPP_API_il2cpp_type_get_object "il2cpp_type_get_object"
+#define IL2CPP_API_il2cpp_object_new "il2cpp_object_new"
+#define IL2CPP_API_il2cpp_value_box "il2cpp_value_box"
+#define IL2CPP_API_il2cpp_array_new "il2cpp_array_new"
+#define IL2CPP_API_il2cpp_field_static_get_value "il2cpp_field_static_get_value"
+#define IL2CPP_API_il2cpp_field_static_set_value "il2cpp_field_static_set_value"
+#define IL2CPP_API_il2cpp_string_new "il2cpp_string_new"
+#define IL2CPP_API_il2cpp_resolve_icall "il2cpp_resolve_icall"
+#define IL2CPP_API_il2cpp_runtime_invoke "il2cpp_runtime_invoke"
+#define IL2CPP_API_il2cpp_domain_get "il2cpp_domain_get"
+#define IL2CPP_API_il2cpp_thread_current "il2cpp_thread_current"
+#define IL2CPP_API_il2cpp_thread_attach "il2cpp_thread_attach"
+#define IL2CPP_API_il2cpp_thread_detach "il2cpp_thread_detach"
+#define IL2CPP_API_il2cpp_gc_alloc_fixed "il2cpp_gc_alloc_fixed"
+#define IL2CPP_API_il2cpp_gc_free_fixed "il2cpp_gc_free_fixed"
