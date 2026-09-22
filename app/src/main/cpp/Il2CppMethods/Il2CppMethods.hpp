@@ -6,6 +6,8 @@
 #include "../Class/Class.hpp"
 #include "../Method/Method.hpp"
 
+#pragma pack(push, 1)
+
 extern struct VMData {
     Class Object{}, UnityEngine$$Object{}, System$$List{};
     Method<Il2CppReflectionType *> Type$$GetType{};
@@ -42,7 +44,12 @@ extern struct Il2CppMethods {
     void (*il2cpp_gc_free_fixed)(void*) = nullptr;
     const Il2CppAssembly**(*il2cpp_domain_get_assemblies)(const Il2CppDomain * domain, size_t * size) = nullptr;
     const Il2CppAssembly*(*il2cpp_domain_assembly_open)(Il2CppDomain * domain, const char* name) = nullptr;
-    std::vector<Il2CppAssembly *> *(*Assembly$$GetAllAssemblies)() = nullptr;
+    //std::vector<Il2CppAssembly *> *(*Assembly$$GetAllAssemblies)() = nullptr;
     void (*orig_Image$$GetTypes)(const Il2CppImage *image, bool exportedOnly, std::vector<Il2CppClass *> *target) = nullptr;
     void (*Class$$Init)(Il2CppClass *klass) = nullptr;
 } il2cppMethods;
+
+#pragma pack(pop)
+
+extern void* il2cpp_init_ptr;
+extern int (*old_il2cpp_init)(const char *);

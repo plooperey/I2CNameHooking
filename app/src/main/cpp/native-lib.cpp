@@ -11,6 +11,7 @@
 #include <thread>
 #include "Class/Class.hpp"
 #include "Utils/Utils.hpp"
+#include <functional>
 
 #if defined(__ARM_ARCH_7A__)
 #    define CURRENT_ARCH "armeabi-v7a"
@@ -28,8 +29,9 @@
 
 bool successfullyLoaded = false;
 void* il2cppHandle = nullptr;
-void* unityHandle = nullptr;
+Utils::PTR baseAddr{};
 ElfScanner eelfScanner{};
+std::function<void()> OnLoadFunc{};
 
 template<typename PTR_T, typename NEW_T, typename T_OLD>
 inline void *BasicHook(PTR_T ptr, NEW_T newMethod, T_OLD &oldBytes) {
@@ -76,6 +78,106 @@ void GetElfScanner() {
     sleep(1);
 }
 
+
+void LoadIl2CppMethods() {
+    // get il2cpp methods
+#if defined(__ARM_ARCH_7A__) || defined(__aarch64__)
+    const uint8_t count = 1;
+#elif defined(__i386__) || defined(__x86_64__)
+    const uint8_t count = 2;
+#endif
+    Logger::LogDebug("Count: " + std::to_string(count));
+    il2cppMethods.Class$$Init = (decltype(il2cppMethods.Class$$Init)) Utils::FindNextJump(Utils::FindNextJump((Utils::PTR)MethodFinder(il2cppHandle, IL2CPP_API_il2cpp_array_new_specific), count), count);
+#define GetIl2cppMethod(method) do { il2cppMethods.method = (decltype(il2cppMethods.method))MethodFinder(il2cppHandle, IL2CPP_API_##method); char ptrStr[64]; snprintf(ptrStr, sizeof(ptrStr), "%p", (void*)il2cppMethods.method); Logger::LogDebug("Found " #method "! Pointer: " + std::string(ptrStr)); } while (0)
+    GetIl2cppMethod(il2cpp_get_corlib);
+    GetIl2cppMethod(il2cpp_class_from_name);
+    GetIl2cppMethod(il2cpp_assembly_get_image);
+    GetIl2cppMethod(il2cpp_image_get_class);
+    GetIl2cppMethod(il2cpp_method_get_param_name);
+    GetIl2cppMethod(il2cpp_class_from_il2cpp_type);
+    GetIl2cppMethod(il2cpp_array_class_get);
+    GetIl2cppMethod(il2cpp_type_get_object);
+    GetIl2cppMethod(il2cpp_object_new);
+    GetIl2cppMethod(il2cpp_value_box);
+    GetIl2cppMethod(il2cpp_array_new);
+    GetIl2cppMethod(il2cpp_field_static_get_value);
+    GetIl2cppMethod(il2cpp_field_static_set_value);
+    GetIl2cppMethod(il2cpp_string_new);
+    GetIl2cppMethod(il2cpp_resolve_icall);
+    GetIl2cppMethod(il2cpp_runtime_invoke);
+    GetIl2cppMethod(il2cpp_domain_get);
+    GetIl2cppMethod(il2cpp_thread_current);
+    GetIl2cppMethod(il2cpp_thread_attach);
+    GetIl2cppMethod(il2cpp_thread_detach);
+    GetIl2cppMethod(il2cpp_gc_alloc_fixed);
+    GetIl2cppMethod(il2cpp_gc_free_fixed);
+    GetIl2cppMethod(il2cpp_domain_get_assemblies);
+    GetIl2cppMethod(il2cpp_domain_assembly_open);
+#undef GetIl2cppMethod
+    Logger::LogDebug("Found all il2cpp methods!");
+
+    if (il2cppMethods.il2cpp_image_get_class == nullptr) {
+        Logger::LogDebug("il2cpp_image_get_class is null, finding it using System::Reflection.Assembly...");
+        auto assemblyClass = il2cppMethods.il2cpp_class_from_name(il2cppMethods.il2cpp_get_corlib(), "System.Reflection", "Assembly");
+        if (!assemblyClass) {
+            Logger::LogError("Unable to find assemblyClass!");
+            return;
+        }
+        Logger::LogDebug("Found assemblyClass!");
+        Utils::PTR GetTypesAddr = Class(assemblyClass).GetMethod("GetTypes", 1).GetAddress();
+        if (GetTypesAddr == 0) {
+            Logger::LogError("Unable to find GetTypes address!");
+            return;
+        }
+        Logger::LogDebug("GetTypes address: " + std::to_string(GetTypesAddr));
+#if UNITY_VERSION >= 211
+        const int sCount = count;
+#elif UNITY_VERSION > 174
+        const int sCount = count + 1;
+        #else
+            const int sCount = count + 2;
+#endif
+        Logger::LogDebug("finding orig_Image$$GetTypes...");
+        il2cppMethods.orig_Image$$GetTypes = (decltype(il2cppMethods.orig_Image$$GetTypes))Utils::FindNextJump(Utils::FindNextJump(Utils::FindNextJump(GetTypesAddr, count), sCount), count);
+        if (!il2cppMethods.orig_Image$$GetTypes) {
+            Logger::LogError("Unable to find orig_Image$$GetTypes!");
+            return;
+        }
+        Logger::LogDebug("Found orig_Image$$GetTypes!");
+    }
+//    Logger::LogDebug("Finding il2cpp_domain_get_assemblies...");
+//    auto adr = (Utils::PTR)MethodFinder(il2cppHandle, IL2CPP_API_il2cpp_domain_get_assemblies);
+//    if (adr == 0) {
+//        Logger::LogError("Unable to find domain_get_assemblies!");
+//        return;
+//    }
+//    Logger::LogDebug("domain_get_assemblies address: " + std::to_string(adr));
+//    il2cppMethods.Assembly$$GetAllAssemblies = (std::vector<Il2CppAssembly*> *(*)())(Utils::FindNextJump(adr, count));
+//    if (!il2cppMethods.Assembly$$GetAllAssemblies) {
+//        Logger::LogError("Unable to find Assembly$$GetAllAssemblies!");
+//        return;
+//    }
+//    Logger::LogDebug("Found Assembly$$GetAllAssemblies!");
+    Logger::LogInfo("Getting ElfScanner...");
+    std::thread(GetElfScanner).join();
+    if (!eelfScanner.isValid()) {
+        Logger::LogError("Unable to find ElfScanner!");
+        return;
+    }
+    Logger::LogDebug("Got ElfScanner!");
+    Logger::LogInfo("Successfully injected into " + KittyMemory::getProcessName() + "!");
+    OnLoadFunc();
+}
+
+int il2cpp_init(const char* domain) {
+    Logger::LogDebug("Hooked il2cpp_init");
+    auto ret = old_il2cpp_init(domain);
+    Logger::LogDebug("domain name: " + std::string(domain) + " ret: " + std::to_string(ret));
+    Unhook(il2cpp_init_ptr);
+    LoadIl2CppMethods();
+    return ret;
+}
+
 bool Init(JNIEnv* env) {
     bool result = false;
     if (successfullyLoaded) return result;
@@ -115,6 +217,8 @@ bool Init(JNIEnv* env) {
         }
     } else {
         result = true;
+        il2cpp_init_ptr = BasicHook(init, il2cpp_init, old_il2cpp_init);
+        Logger::LogDebug("Hooked il2cpp_init 1 ptr: " + std::to_string((Utils::PTR)il2cpp_init_ptr));
         goto DONE;
     }
     if (libsExtracted) goto DONE;
@@ -128,97 +232,12 @@ bool Init(JNIEnv* env) {
     if (!init) {
         return false;
     }
+    il2cpp_init_ptr = BasicHook(init, il2cpp_init, old_il2cpp_init);
+    Logger::LogDebug("Hooked il2cpp_init 2 ptr: " + std::to_string((Utils::PTR)il2cpp_init_ptr));
 
     DONE:
     if (handle) il2cppHandle = handle;
-
-    // get elfscanner
-    Logger::LogInfo("Getting ElfScanner...");
-    std::thread(GetElfScanner).join();
-    if (!eelfScanner.isValid()) {
-        Logger::LogError("Unable to find ElfScanner!");
-        return false;
-    }
-
-    // get il2cpp methods
-#if defined(__ARM_ARCH_7A__) || defined(__aarch64__)
-    const uint8_t count = 1;
-#elif defined(__i386__) || defined(__x86_64__)
-    const uint8_t count = 2;
-#endif
-    Logger::LogDebug("Count: " + std::to_string(count));
-    il2cppMethods.Class$$Init = (decltype(il2cppMethods.Class$$Init)) Utils::FindNextJump(Utils::FindNextJump((Utils::PTR)MethodFinder(handle, IL2CPP_API_il2cpp_array_new_specific), count), count);
-#define GetIl2cppMethod(method) do { il2cppMethods.method = reinterpret_cast<decltype(il2cppMethods.method)>(MethodFinder(handle, IL2CPP_API_##method)); char ptrStr[64]; snprintf(ptrStr, sizeof(ptrStr), "%p", (void*)il2cppMethods.method); Logger::LogDebug("Found " #method "! Pointer: " + std::string(ptrStr)); } while (0)
-    GetIl2cppMethod(il2cpp_get_corlib);
-    GetIl2cppMethod(il2cpp_class_from_name);
-    GetIl2cppMethod(il2cpp_assembly_get_image);
-    GetIl2cppMethod(il2cpp_image_get_class);
-    GetIl2cppMethod(il2cpp_method_get_param_name);
-    GetIl2cppMethod(il2cpp_class_from_il2cpp_type);
-    GetIl2cppMethod(il2cpp_array_class_get);
-    GetIl2cppMethod(il2cpp_type_get_object);
-    GetIl2cppMethod(il2cpp_object_new);
-    GetIl2cppMethod(il2cpp_value_box);
-    GetIl2cppMethod(il2cpp_array_new);
-    GetIl2cppMethod(il2cpp_field_static_get_value);
-    GetIl2cppMethod(il2cpp_field_static_set_value);
-    GetIl2cppMethod(il2cpp_string_new);
-    GetIl2cppMethod(il2cpp_resolve_icall);
-    GetIl2cppMethod(il2cpp_runtime_invoke);
-    GetIl2cppMethod(il2cpp_domain_get);
-    GetIl2cppMethod(il2cpp_thread_current);
-    GetIl2cppMethod(il2cpp_thread_attach);
-    GetIl2cppMethod(il2cpp_thread_detach);
-    GetIl2cppMethod(il2cpp_gc_alloc_fixed);
-    GetIl2cppMethod(il2cpp_gc_free_fixed);
-    GetIl2cppMethod(il2cpp_domain_get_assemblies);
-    GetIl2cppMethod(il2cpp_domain_assembly_open);
-#undef GetIl2cppMethod
-    Logger::LogDebug("Found all il2cpp methods!");
-
-    if (il2cppMethods.il2cpp_image_get_class == nullptr) {
-        Logger::LogDebug("il2cpp_image_get_class is null, finding it using System::Reflection.Assembly...");
-        auto assemblyClass = il2cppMethods.il2cpp_class_from_name(il2cppMethods.il2cpp_get_corlib(), "System.Reflection", "Assembly");
-        if (!assemblyClass) {
-            Logger::LogError("Unable to find assemblyClass!");
-            return false;
-        }
-        Logger::LogDebug("Found assemblyClass!");
-        Utils::PTR GetTypesAddr = Class(assemblyClass).GetMethod("GetTypes", 1).GetAddress();
-        if (GetTypesAddr == 0) {
-            Logger::LogError("Unable to find GetTypes address!");
-            return false;
-        }
-        Logger::LogDebug("GetTypes address: " + std::to_string(GetTypesAddr));
-        #if UNITY_VERSION >= 211
-            const int sCount = count;
-        #elif UNITY_VERSION > 174
-            const int sCount = count + 1;
-        #else
-            const int sCount = count + 2;
-        #endif
-        Logger::LogDebug("finding orig_Image$$GetTypes...");
-        il2cppMethods.orig_Image$$GetTypes = (decltype(il2cppMethods.orig_Image$$GetTypes))Utils::FindNextJump(Utils::FindNextJump(Utils::FindNextJump(GetTypesAddr, count), sCount), count);
-        if (!il2cppMethods.orig_Image$$GetTypes) {
-            Logger::LogError("Unable to find orig_Image$$GetTypes!");
-            return false;
-        }
-        Logger::LogDebug("Found orig_Image$$GetTypes!");
-    }
-    Logger::LogDebug("Finding il2cpp_domain_get_assemblies...");
-    auto adr = (Utils::PTR)MethodFinder(handle, IL2CPP_API_il2cpp_domain_get_assemblies);
-    if (adr == 0) {
-        Logger::LogError("Unable to find domain_get_assemblies!");
-        return false;
-    }
-    Logger::LogDebug("domain_get_assemblies address: " + std::to_string(adr));
-    //Utils::DumpInstructions(adr, 200);
-    il2cppMethods.Assembly$$GetAllAssemblies = (std::vector<Il2CppAssembly *> *(*)())adr;
-    if (!il2cppMethods.Assembly$$GetAllAssemblies) {
-        Logger::LogError("Unable to find Assembly$$GetAllAssemblies!");
-        return false;
-    }
-    Logger::LogDebug("Found Assembly$$GetAllAssemblies!");
+    Logger::LogDebug("Init is done!");
     return result;
 }
 
@@ -228,12 +247,16 @@ void new_Awake(void* instance) {
     Awake(instance);
 }
 
+void (*JoinedRoom)(void*, UnityString);
+void new_JoinedRoom(void* inst, UnityString room) {
+    Logger::LogDebug("Joining room '" + room.str() + '\'');
+    JoinedRoom(inst, room);
+}
+
 void OnLoad() {
-    Class c = Class("", "AccountManager");
-    InnerMethod m = c.GetMethod("Awake");
-    Logger::LogDebug("AccountManager.Awake pointer: " + std::to_string(m.GetAddress()));
-    if (m.IsValid()) BasicHook(Class("", "AccountManager").GetMethod("Awake").GetAddress(), new_Awake, Awake);
-    else Logger::LogError("AccountManager.Awake is invalid!");
+    Class c = Class("", "KeyboardManager");
+    InnerMethod m = c.GetMethod("JoinRoom");
+    if (m.IsValid()) BasicHook(m.GetAddress(), new_JoinedRoom, JoinedRoom);
 }
 
 JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, [[maybe_unused]] void *reserved)
@@ -244,12 +267,10 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, [[maybe_unused]] void *reserved)
         Logger::LogError("Unable to get ENV!");
         return -1;
     }
+    OnLoadFunc = OnLoad;
     if (!Init(env)) {
         Logger::LogError("Failed to init!");
         return -1;
-    } else {
-        Logger::LogInfo("Successfully injected into " + KittyMemory::getProcessName() + "!");
-        OnLoad();
     }
     return JNI_VERSION_1_6;
 }

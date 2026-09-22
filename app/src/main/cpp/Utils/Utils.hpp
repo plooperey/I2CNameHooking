@@ -5,7 +5,7 @@
 #include <dlfcn.h>
 
 struct Utils {
-#ifdef __LP64__
+#if defined(__LP64__)
     typedef unsigned long PTR;
 #else
     typedef unsigned int PTR;

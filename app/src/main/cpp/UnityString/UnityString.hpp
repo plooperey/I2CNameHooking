@@ -11,13 +11,12 @@ struct UnityString : Il2CppObject {
     Il2CppChar chars[0]{};
     std::string str();
 
-    [[nodiscard]]
-    unsigned int GetHash() const;
+    [[nodiscard]] unsigned int GetHash() const;
 
     static UnityString* Empty();
     static UnityString* CreateUnityString(const std::string& str);
 
-    [[nodiscard]]
-    inline bool IsNullOrEmpty() const;
+    [[nodiscard]] inline bool IsNullOrEmpty() const;
     inline constexpr UnityString() : Il2CppObject() {}
+    UnityString(const char*);
 };

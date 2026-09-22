@@ -27,6 +27,10 @@ inline bool UnityString::IsNullOrEmpty() const {
     return true;
 }
 
+inline UnityString::UnityString(const char* str) {
+
+}
+
 std::string UnityString::Utf16ToUtf8(Il2CppChar *utf16String, size_t length) {
     std::string utf8String{};
     utf8String.reserve(length);

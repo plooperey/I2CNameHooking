@@ -18,26 +18,31 @@ Class::Class(const Il2CppClass* clazz) {
 }
 
 Class::Class(const char* classNamespace, const char* className) {
-    Logger::LogDebug("Find class with namespace '" + std::string(classNamespace) + "' and class name '" + std::string(className) + "'");
-    std::vector<Il2CppAssembly*>* assemblies{};
-    if (il2cppMethods.Assembly$$GetAllAssemblies) assemblies = il2cppMethods.Assembly$$GetAllAssemblies();
-    else {
-        Logger::LogError("GetAllAssemblies is null!");
+    Logger::LogDebug("Finding class with namespace '" + std::string(classNamespace) + "' and class name '" + std::string(className) + "'");
+    if (!il2cppMethods.il2cpp_domain_get_assemblies || !il2cppMethods.il2cpp_domain_get) {
+        Logger::LogError("Required il2cpp methods are null!");
         return;
     }
-    if (assemblies->empty()) {
+    auto domain = il2cppMethods.il2cpp_domain_get();
+    size_t assemblyCount = 0;
+    auto assemblies = *il2cppMethods.il2cpp_domain_get_assemblies(domain, &assemblyCount);
+    if (!assemblies || assemblyCount == 0) {
         Logger::LogError("Assemblies is null!");
         return;
     }
-    for (auto assembly : *assemblies) {
-        Il2CppImage* image = assembly->image;
-        Logger::LogDebug(assembly->aname.name);
-        Logger::LogDebug(image->name);
+    //Logger::LogDebug("Got all assemblies!");
+    for (size_t a = 0; a < assemblyCount; ++a) {
+        auto assembly = assemblies[a];
+        Il2CppImage* image = assembly.image;
         size_t count = image->typeCount;
         for (size_t i = 0; i < count; ++i) {
             auto clazz = il2cppMethods.il2cpp_image_get_class(image, i);
-            Logger::LogDebug("Class namespace '" + std::string(clazz->namespaze) + "' class name '" + std::string(clazz->name) + '\'');
-            if (clazz->namespaze == classNamespace && clazz->name == className) classData = clazz;
+            if (!clazz || !clazz->namespaze || !clazz->name) continue;
+            if (std::string(clazz->namespaze) == classNamespace &&
+                std::string(clazz->name) == className) {
+                classData = clazz;
+                return;
+            }
         }
     }
 }

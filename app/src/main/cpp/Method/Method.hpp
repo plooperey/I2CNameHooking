@@ -40,5 +40,5 @@ struct Method : public InnerMethod {
     }
 
     template <typename ...Params>
-    inline Ret operator()(Params ...params) {  }
+    inline Ret operator()(Params ...params) { Call(params...);  }
 };
