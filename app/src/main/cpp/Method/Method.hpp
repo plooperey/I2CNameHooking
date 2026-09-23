@@ -3,9 +3,11 @@
 #include "../2022.3.62f3.h"
 #include "../Utils/Utils.hpp"
 #include "InnerMethod.hpp"
+#include "Dobby/include/dobby.h"
 
 template <typename Ret>
-struct Method : public InnerMethod {
+class Method : public InnerMethod {
+public:
     template <typename ...Params>
     Ret Call(Params ...params) const {
         if (methodData == nullptr) {
@@ -40,5 +42,37 @@ struct Method : public InnerMethod {
     }
 
     template <typename ...Params>
-    inline Ret operator()(Params ...params) { Call(params...);  }
+    inline Ret operator()(Params ...params) { return Call(params...);  }
+
+    template <typename PTR_T, typename NEW_T, typename OLD_T>
+    static void* Hook(PTR_T ptr, NEW_T newMethod, OLD_T& oldBytes) {
+        if ((void*)ptr != nullptr)
+            ::DobbyHook((void*)ptr, (dobby_dummy_func_t)newMethod, (dobby_dummy_func_t*)&oldBytes);
+        return (void*)ptr;
+    }
+
+    template <typename NEW_T, typename OLD_T>
+    void* Hook(NEW_T newMethod, OLD_T& oldMethod) {
+        if (this->IsValid())
+            Method::Hook(this->GetAddress(), newMethod, oldMethod);
+        return this->GetAddress();
+    }
+
+    template <typename PTR_T, typename NEW_T, typename OLD_T>
+    void* Hook(PTR_T ptr, NEW_T newMethod, OLD_T& oldBytes) {
+        if (this->IsValid())
+            Method::Hook(this->GetAddress(), newMethod, oldBytes);
+        return this->GetAddress();
+    }
+
+    template <typename PTR_T>
+    static void Unhook(PTR_T ptr) {
+        if ((void*)ptr != nullptr)
+            DobbyDestroy((void*)ptr);
+    }
+
+    void UnHook() {
+        if (this->IsValid())
+            Unhook(this->GetAddress());
+    }
 };

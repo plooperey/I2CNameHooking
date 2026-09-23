@@ -1,8 +1,8 @@
 #include "UnityString.hpp"
 #include "../Il2CppMethods/Il2CppMethods.hpp"
 
-UnityString* UnityString::CreateUnityString(const std::string& str) {
-    return il2cppMethods.il2cpp_string_new(str.data());
+UnityString* UnityString::CreateUnityString(const char* str) {
+    return il2cppMethods.il2cpp_string_new(str);
 }
 
 std::string UnityString::str() {

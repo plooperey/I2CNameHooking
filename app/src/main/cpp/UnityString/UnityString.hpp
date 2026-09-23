@@ -14,7 +14,7 @@ struct UnityString : Il2CppObject {
     [[nodiscard]] unsigned int GetHash() const;
 
     static UnityString* Empty();
-    static UnityString* CreateUnityString(const std::string& str);
+    static UnityString* CreateUnityString(const char* str);
 
     [[nodiscard]] inline bool IsNullOrEmpty() const;
     inline constexpr UnityString() : Il2CppObject() {}
