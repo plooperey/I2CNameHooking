@@ -6,6 +6,9 @@
 template <typename Ret> struct Method;
 struct InnerMethod {
     InnerMethod(const MethodInfo* data);
+    InnerMethod(const InnerMethod& meth);
+    template <typename Other>
+    InnerMethod(const Method<Other> oth);
     inline constexpr InnerMethod() = default;
     [[nodiscard]] bool IsValid() const;
 

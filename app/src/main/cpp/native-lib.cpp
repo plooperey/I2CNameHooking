@@ -8,7 +8,7 @@
 #include <thread>
 #include "Class/Class.hpp"
 #include "Utils/Utils.hpp"
-#include "Loader.cpp"
+#include "Loader/Loader.hpp"
 
 void (*Awake)(void*);
 void new_Awake(void* instance) {
@@ -23,9 +23,9 @@ void new_JoinedRoom(void* inst, const char* room) {
 }
 
 void OnLoad() {
-    Class c = Class("", "KeyboardManager");
-    InnerMethod m = c.GetMethod("JoinRoom");
-    if (m.IsValid()) Method<void>::Hook(m.GetAddress(), new_JoinedRoom, JoinedRoom);
+    Class c = Class(Image(""), "", "KeyboardManager");
+    Method<void> m = c.GetMethod("JoinRoom");
+    if (m.IsValid()) Method<void>::Hook(m, new_JoinedRoom, JoinedRoom);
 }
 
 JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, [[maybe_unused]] void *reserved)
@@ -36,8 +36,8 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, [[maybe_unused]] void *reserved)
         Logger::LogError("Unable to get ENV!");
         return -1;
     }
-    OnLoadFunc = OnLoad;
-    if (!Init(env)) {
+    Loader::OnLoadFunc = OnLoad;
+    if (!Loader::Init(env)) {
         Logger::LogError("Failed to init!");
         return -1;
     }

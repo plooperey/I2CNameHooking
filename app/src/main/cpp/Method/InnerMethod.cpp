@@ -1,7 +1,20 @@
 #include "InnerMethod.hpp"
 
-InnerMethod::InnerMethod(const MethodInfo* inf) {
-    methodData = (MethodInfo*)inf;
+InnerMethod::InnerMethod(const MethodInfo* info) {
+    methodData = (MethodInfo*)info;
+}
+
+InnerMethod::InnerMethod(const InnerMethod& meth) {
+    methodData = meth.methodData;
+    isStatic = meth.isStatic;
+    instance = meth.instance;
+}
+
+template<typename Other>
+InnerMethod::InnerMethod(const Method<Other> oth) {
+    methodData = oth.methodData;
+    isStatic = oth.isStatic;
+    instance = oth.instance;
 }
 
 bool InnerMethod::IsValid() const {

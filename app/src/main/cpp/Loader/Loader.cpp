@@ -1,13 +1,4 @@
-#include <functional>
-#include <string>
-#include <dlfcn.h>
-#include "KittyMemory/KittyInclude.hpp"
-#include "Utils/Utils.hpp"
-#include "Il2CppMethods/Il2CppMethods.hpp"
-#include "IL2CppNames.h"
-#include "Method/Method.hpp"
-#include <thread>
-#include <jni.h>
+#include "Loader.hpp"
 
 #if defined(__ARM_ARCH_7A__)
 #    define CURRENT_ARCH "armeabi-v7a"
@@ -23,33 +14,27 @@
 
 #define UNITY_VERSION 222
 
-bool successfullyLoaded = false;
-void* il2cppHandle = nullptr;
-Utils::PTR baseAddr{};
-ElfScanner eelfScanner{};
-std::function<void()> OnLoadFunc{};
-
-void* MethodFinder(void* libHandle, const char* symbolName) {
+void* Loader::MethodFinder(void* libHandle, const char* symbolName) {
     return dlsym(libHandle, symbolName);
 }
 
-void GetElfScanner() {
+void Loader::GetElfScanner() {
     std::string libName = "libil2cpp.so";
-    while (!eelfScanner.isValid()) {
+    while (!Loader::eelfScanner.isValid()) {
         sleep(1);
-        eelfScanner = ElfScanner::findElf(libName);
+        Loader::eelfScanner = ElfScanner::findElf(libName);
 
         auto nativeSo = LinkerScanner::Get().findSoInfo(libName);
         if (nativeSo.ptr) {
-            eelfScanner = ElfScanner::createWithSoInfo(nativeSo);
+            Loader::eelfScanner = ElfScanner::createWithSoInfo(nativeSo);
         }
         auto emSo = NativeBridgeScanner::Get().findSoInfo(libName);
         if (emSo.ptr) {
-            eelfScanner = ElfScanner::createWithSoInfo(emSo);
+            Loader::eelfScanner = ElfScanner::createWithSoInfo(emSo);
         }
         for (auto& it : ElfScanner::findSymbolAll("il2cpp_init", EScanElfType::Any, EScanElfFilter::App)) {
             if (it.second.dynamic()) {
-                eelfScanner = it.second;
+                Loader::eelfScanner = it.second;
                 break;
             }
         }
@@ -58,7 +43,7 @@ void GetElfScanner() {
 }
 
 
-void LoadIl2CppMethods() {
+void Loader::LoadIl2CppMethods() {
     // get il2cpp methods
 #if defined(__ARM_ARCH_7A__) || defined(__aarch64__)
     const uint8_t count = 1;
@@ -66,8 +51,8 @@ void LoadIl2CppMethods() {
     const uint8_t count = 2;
 #endif
     Logger::LogDebug("Count: " + std::to_string(count));
-    il2cppMethods.Class$$Init = (decltype(il2cppMethods.Class$$Init)) Utils::FindNextJump(Utils::FindNextJump((Utils::PTR)MethodFinder(il2cppHandle, IL2CPP_API_il2cpp_array_new_specific), count), count);
-#define GetIl2cppMethod(method) do { il2cppMethods.method = (decltype(il2cppMethods.method))MethodFinder(il2cppHandle, IL2CPP_API_##method); char ptrStr[64]; snprintf(ptrStr, sizeof(ptrStr), "%p", (void*)il2cppMethods.method); Logger::LogDebug("Found " #method "! Pointer: " + std::string(ptrStr)); } while (0)
+    il2cppMethods.Class$$Init = (decltype(il2cppMethods.Class$$Init)) Utils::FindNextJump(Utils::FindNextJump((Utils::PTR)MethodFinder(Loader::il2cppHandle, IL2CPP_API_il2cpp_array_new_specific), count), count);
+#define GetIl2cppMethod(method) do { il2cppMethods.method = (decltype(il2cppMethods.method))MethodFinder(Loader::il2cppHandle, IL2CPP_API_##method); char ptrStr[64]; snprintf(ptrStr, sizeof(ptrStr), "%p", (void*)il2cppMethods.method); Logger::LogDebug("Found " #method "! Pointer: " + std::string(ptrStr)); } while (0)
     GetIl2cppMethod(il2cpp_get_corlib);
     GetIl2cppMethod(il2cpp_class_from_name);
     GetIl2cppMethod(il2cpp_assembly_get_image);
@@ -139,13 +124,13 @@ void LoadIl2CppMethods() {
 //    Logger::LogDebug("Found Assembly$$GetAllAssemblies!");
     Logger::LogInfo("Getting ElfScanner...");
     std::thread(GetElfScanner).join();
-    if (!eelfScanner.isValid()) {
+    if (!Loader::eelfScanner.isValid()) {
         Logger::LogError("Unable to find ElfScanner!");
         return;
     }
     Logger::LogDebug("Got ElfScanner!");
     Logger::LogInfo("Successfully injected into " + KittyMemory::getProcessName() + "!");
-    OnLoadFunc();
+    Loader::OnLoadFunc();
 }
 
 int il2cpp_init(const char* domain) {
@@ -153,13 +138,13 @@ int il2cpp_init(const char* domain) {
     auto ret = old_il2cpp_init(domain);
     Logger::LogDebug("domain name: " + std::string(domain) + " ret: " + std::to_string(ret));
     Method<void>::Unhook(il2cpp_init_ptr);
-    LoadIl2CppMethods();
+    Loader::LoadIl2CppMethods();
     return ret;
 }
 
-bool Init(JNIEnv* env) {
+bool Loader::Init(JNIEnv* env) {
     bool result = false;
-    if (successfullyLoaded) return result;
+    if (Loader::successfullyLoaded) return result;
     // get application
     jobject application = nullptr;
     jclass activityThread = env->FindClass("android/app/ActivityThread");
@@ -211,12 +196,12 @@ bool Init(JNIEnv* env) {
     if (!init) {
         return false;
     }
-    il2cpp_init_ptr = Method<void>::Hook(init, il2cpp_init, old_il2cpp_init);
+    Il2CppMethods::il2cpp_init_ptr = Method<void>::Hook(init, Loader::il2cpp_init, old_il2cpp_init);
     Logger::LogDebug("Hooked il2cpp_init 2 ptr: " + std::to_string((Utils::PTR)il2cpp_init_ptr));
 
     DONE:
-    if (handle) il2cppHandle = handle;
-    successfullyLoaded = true;
+    if (handle) Loader::il2cppHandle = handle;
+    Loader::successfullyLoaded = true;
     Logger::LogDebug("Init is done!");
     return result;
 }

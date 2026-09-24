@@ -10,7 +10,7 @@
 
 extern struct VMData {
     Class Object{}, UnityEngine$$Object{}, System$$List{};
-    Method<Il2CppReflectionType *> Type$$GetType{};
+    //Method<Il2CppReflectionType *> Type$$GetType{};
     Method<void *> Interlocked$$CompareExchange{};
     //Method<BNM::MonoType *> RuntimeType$$MakeGenericType{};
     //Method<BNM::MonoType *> RuntimeType$$MakePointerType{};

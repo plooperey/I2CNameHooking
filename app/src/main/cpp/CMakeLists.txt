@@ -30,7 +30,8 @@ add_library(${CMAKE_PROJECT_NAME} SHARED
         Method/Method.cpp
         Method/InnerMethod.cpp
         Il2CppMethods/Il2CppMethods.cpp
-        Loader.cpp
+        Loader/Loader.cpp
+        Image/Image.cpp
         ${KITTYMEMORY_SRC}
 )
 

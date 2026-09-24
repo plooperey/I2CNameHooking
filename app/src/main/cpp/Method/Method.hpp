@@ -8,6 +8,12 @@
 template <typename Ret>
 class Method : public InnerMethod {
 public:
+    constexpr Method() noexcept = default;
+    Method(const MethodInfo* inf) : InnerMethod(inf) {}
+    Method(const InnerMethod& meth) : InnerMethod(meth) {}
+    template <typename Other>
+    Method(const Method<Other> oth) : InnerMethod(oth) { this = oth; }
+
     template <typename ...Params>
     Ret Call(Params ...params) const {
         if (methodData == nullptr) {
@@ -44,6 +50,9 @@ public:
     template <typename ...Params>
     inline Ret operator()(Params ...params) { return Call(params...);  }
 
+    Method<Ret>& operator[](Il2CppObject* inst) { SetInstance(inst); return *this; }
+    Method<Ret>& operator[](void* inst) { SetInstance((Il2CppObject*)inst); return *this; }
+
     template <typename PTR_T, typename NEW_T, typename OLD_T>
     static void* Hook(PTR_T ptr, NEW_T newMethod, OLD_T& oldBytes) {
         if ((void*)ptr != nullptr)
@@ -51,17 +60,17 @@ public:
         return (void*)ptr;
     }
 
+    template <typename TYPE_T, typename NEW_T, typename OLD_T>
+    static void* Hook(const Method<TYPE_T>& ptr, NEW_T newMethod, OLD_T& oldBytes) {
+        if ((void*)ptr.GetAddress() != nullptr)
+            ::DobbyHook((void*)ptr.GetAddress(), (dobby_dummy_func_t)newMethod, (dobby_dummy_func_t*)&oldBytes);
+        return (void*)ptr.GetAddress();
+    }
+
     template <typename NEW_T, typename OLD_T>
     void* Hook(NEW_T newMethod, OLD_T& oldMethod) {
         if (this->IsValid())
             Method::Hook(this->GetAddress(), newMethod, oldMethod);
-        return this->GetAddress();
-    }
-
-    template <typename PTR_T, typename NEW_T, typename OLD_T>
-    void* Hook(PTR_T ptr, NEW_T newMethod, OLD_T& oldBytes) {
-        if (this->IsValid())
-            Method::Hook(this->GetAddress(), newMethod, oldBytes);
         return this->GetAddress();
     }
 

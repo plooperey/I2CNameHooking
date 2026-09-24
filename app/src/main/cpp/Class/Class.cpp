@@ -31,11 +31,11 @@ Class::Class(const char* classNamespace, const char* className) {
         return;
     }
     //Logger::LogDebug("Got all assemblies!");
-    for (size_t a = 0; a < assemblyCount; ++a) {
+    for (size_t a = 0; a < assemblyCount; a++) {
         auto assembly = assemblies[a];
         Il2CppImage* image = assembly.image;
         size_t count = image->typeCount;
-        for (size_t i = 0; i < count; ++i) {
+        for (size_t i = 0; i < count; i++) {
             auto clazz = il2cppMethods.il2cpp_image_get_class(image, i);
             if (!clazz || !clazz->namespaze || !clazz->name) continue;
             if (std::string(clazz->namespaze) == classNamespace &&
@@ -47,13 +47,25 @@ Class::Class(const char* classNamespace, const char* className) {
     }
 }
 
+Class::Class(const Image& img, const char* classNamespace, const char* className) {
+    uint32_t count = img.imageData->typeCount;
+    for (uint32_t i = 0; i < count; i++) {
+        auto clazz = il2cppMethods.il2cpp_image_get_class(img.imageData, i);
+        if (!clazz || !clazz->namespaze || !clazz->name) continue;
+        if (strcmp(clazz->namespaze, classNamespace) == 0 && strcmp(clazz->name, className) == 0) {
+            classData = clazz;
+            return;
+        }
+    }
+}
+
 void Class::TryInit() const {
     if (classData) il2cppMethods.Class$$Init(classData);
 }
 
 InnerMethod Class::GetMethod(const std::string& methodName) const {
     Class::TryInit();
-    for (uint32_t i = 0; i < classData->method_count; i++) {
+    for (uint16_t i = 0; i < classData->method_count; i++) {
         const MethodInfo* method = classData->methods[i];
         if (method->name == methodName) return method;
     }
@@ -62,7 +74,7 @@ InnerMethod Class::GetMethod(const std::string& methodName) const {
 
 InnerMethod Class::GetMethod(const std::string& methodName, int paramsCount) const {
     Class::TryInit();
-    for (uint32_t i = 0; i < classData->method_count; i++) {
+    for (uint16_t i = 0; i < classData->method_count; i++) {
         auto method = classData->methods[i];
         if (method->name == methodName && method->parameters_count == paramsCount) return method;
     }
@@ -72,4 +84,17 @@ InnerMethod Class::GetMethod(const std::string& methodName, int paramsCount) con
 bool Class::IsValid() const {
     Class::TryInit();
     return classData;
+}
+
+std::vector<InnerMethod> Class::GetMethods() {
+    if (!IsValid()) {
+        Logger::LogWarning("Trying to call GetMethods on an invalid class!");
+        return std::vector<InnerMethod>{};
+    }
+    std::vector<InnerMethod> methods{};
+    uint16_t count = classData->method_count;
+    for (uint16_t i = 0; i < count; i++) {
+        methods.push_back(classData->methods[i]);
+    }
+    return methods;
 }
