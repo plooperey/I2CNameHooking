@@ -1,4 +1,5 @@
 #include "Image.hpp"
+#include "../Il2CppMethods/Il2CppMethods.hpp"
 
 Image::Image(const char* asmName) {
     Il2CppDomain* domain = il2cppMethods.il2cpp_domain_get();

@@ -7,9 +7,9 @@ template <typename Ret> struct Method;
 struct InnerMethod {
     InnerMethod(const MethodInfo* data);
     InnerMethod(const InnerMethod& meth);
+    inline constexpr InnerMethod() = default;
     template <typename Other>
     InnerMethod(const Method<Other> oth);
-    inline constexpr InnerMethod() = default;
     [[nodiscard]] bool IsValid() const;
 
     inline InnerMethod& operator[](Il2CppObject* inst) { SetInstance(inst); return *this; }

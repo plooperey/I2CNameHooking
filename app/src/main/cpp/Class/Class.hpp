@@ -7,6 +7,7 @@
 #include <string>
 #include <cstdio>
 
+struct Image;
 struct Class {
     Class(const Il2CppObject*);
     Class(const Il2CppClass*);

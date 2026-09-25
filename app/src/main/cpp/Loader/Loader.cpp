@@ -77,6 +77,8 @@ void Loader::LoadIl2CppMethods() {
     GetIl2cppMethod(il2cpp_gc_free_fixed);
     GetIl2cppMethod(il2cpp_domain_get_assemblies);
     GetIl2cppMethod(il2cpp_domain_assembly_open);
+    GetIl2cppMethod(il2cpp_field_get_value);
+    GetIl2cppMethod(il2cpp_field_set_value);
 #undef GetIl2cppMethod
     Logger::LogDebug("Found all il2cpp methods!");
 
@@ -133,7 +135,7 @@ void Loader::LoadIl2CppMethods() {
     Loader::OnLoadFunc();
 }
 
-int il2cpp_init(const char* domain) {
+int Loader::il2cpp_init(const char* domain) {
     Logger::LogDebug("Hooked il2cpp_init");
     auto ret = old_il2cpp_init(domain);
     Logger::LogDebug("domain name: " + std::string(domain) + " ret: " + std::to_string(ret));
@@ -196,7 +198,7 @@ bool Loader::Init(JNIEnv* env) {
     if (!init) {
         return false;
     }
-    Il2CppMethods::il2cpp_init_ptr = Method<void>::Hook(init, Loader::il2cpp_init, old_il2cpp_init);
+    il2cpp_init_ptr = Method<void>::Hook(init, Loader::il2cpp_init, old_il2cpp_init);
     Logger::LogDebug("Hooked il2cpp_init 2 ptr: " + std::to_string((Utils::PTR)il2cpp_init_ptr));
 
     DONE:

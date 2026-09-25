@@ -2,6 +2,7 @@
 
 InnerMethod::InnerMethod(const MethodInfo* info) {
     methodData = (MethodInfo*)info;
+    isStatic = (info->flags & 0x0010) == 0x0010;
 }
 
 InnerMethod::InnerMethod(const InnerMethod& meth) {

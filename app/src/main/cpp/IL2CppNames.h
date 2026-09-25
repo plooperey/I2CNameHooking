@@ -31,3 +31,5 @@
 #define IL2CPP_API_il2cpp_thread_detach "il2cpp_thread_detach"
 #define IL2CPP_API_il2cpp_gc_alloc_fixed "il2cpp_gc_alloc_fixed"
 #define IL2CPP_API_il2cpp_gc_free_fixed "il2cpp_gc_free_fixed"
+#define IL2CPP_API_il2cpp_field_get_value "il2cpp_field_get_value"
+#define IL2CPP_API_il2cpp_field_set_value "il2cpp_field_set_value"

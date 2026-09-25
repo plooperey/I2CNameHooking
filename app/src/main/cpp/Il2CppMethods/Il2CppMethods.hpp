@@ -44,6 +44,9 @@ extern struct Il2CppMethods {
     void (*il2cpp_gc_free_fixed)(void*) = nullptr;
     const Il2CppAssembly**(*il2cpp_domain_get_assemblies)(const Il2CppDomain * domain, size_t * size) = nullptr;
     const Il2CppAssembly*(*il2cpp_domain_assembly_open)(Il2CppDomain * domain, const char* name) = nullptr;
+    void (*il2cpp_field_get_value)(Il2CppObject* obj, FieldInfo* field, void* value);
+    void (*il2cpp_field_set_value)(Il2CppObject* obj, FieldInfo* field, void* value);
+
     //std::vector<Il2CppAssembly *> *(*Assembly$$GetAllAssemblies)() = nullptr;
     void (*orig_Image$$GetTypes)(const Il2CppImage *image, bool exportedOnly, std::vector<Il2CppClass *> *target) = nullptr;
     void (*Class$$Init)(Il2CppClass *klass) = nullptr;
